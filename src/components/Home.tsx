@@ -8,11 +8,33 @@ import {
   ListGroup,
   Button,
 } from "react-bootstrap"
+import { Message, User } from "../types"
+import { io } from "socket.io-client"
+
+
+const socket = io("http://localhost:3001", {transports: ["websocket"]})
+
 
 const Home = () => {
   const [username, setUsername] = useState("")
   const [message, setMessage] = useState("")
+const [loggedIn, setLoggedIn] = useState(false)
+const [onlineUsers, setOnlineUsers] = useState<User[]>([])
 
+useEffect(()=>{
+  socket.on("welcome", welcomeMessage =>{
+    console.log(welcomeMessage)
+    socket.on("loggedIn", onlineUserList => {
+      console.log("logged in event:", onlineUserList)
+      setLoggedIn(true)
+      setOnlineUsers(onlineUserList)
+    })
+  })
+})
+
+const submitUserName = () => {
+  socket.emit("setUserName", {username})
+}
   return (
     <Container fluid>
       <Row style={{ height: "95vh" }} className="my-3">
@@ -22,7 +44,9 @@ const Home = () => {
           {/* {!loggedIn && ( */}
           <Form
             onSubmit={e => {
-              e.preventDefault()
+              e.preventDefault();
+              submitUserName();
+              console.log(username)
             }}
           >
             <FormControl
@@ -44,12 +68,17 @@ const Home = () => {
               placeholder="Write your message here"
               value={message}
               onChange={e => setMessage(e.target.value)}
+              disabled={!loggedIn}
             />
           </Form>
         </Col>
         <Col md={3}>
           {/* ONLINE USERS SECTION */}
           <div className="mb-3">Connected users:</div>
+          {onlineUsers.length === 0 && <ListGroup.Item>log in to see who is online</ListGroup.Item>}
+          <ListGroup>
+            {onlineUsers.map(user => (<ListGroup.Item key={user.id}>{user.username}</ListGroup.Item>))}
+          </ListGroup>
         </Col>
       </Row>
     </Container>
